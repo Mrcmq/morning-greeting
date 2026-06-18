@@ -1,181 +1,102 @@
-name: Ã¿ÈÕÔç°²×Ô¶¯Éú³ÉÓë·¢²¼
-
+name: æ¯æ—¥æ—©å®‰è‡ªåŠ¨ç”Ÿæˆä¸Žå‘å¸ƒ
 on:
   schedule:
-    # ±±¾©Ê±¼ä 05:30 = UTC 21:30
     - cron: '30 21 * * *'
   workflow_dispatch:
     inputs:
       city:
-        description: ³ÇÊÐ
+        description: åŸŽå¸‚
         required: false
-        default: "±±¾©"
+        default: "åŒ—äº¬"
       style:
-        description: ÎÄ°¸·ç¸ñ
+        description: æ–‡æ¡ˆé£Žæ ¼
         required: false
-        default: "ÎÂÅ¯ÖÎÓú"
+        default: "æ¸©æš–æ²»æ„ˆ"
       llm_base_url:
-        description: "LLM API µØÖ·£¨deepseek ÓÃ https://api.deepseek.com/v1£©"
+        description: LLM APIåœ°å€(deepseekç”¨ https://api.deepseek.com/v1)
         required: false
         default: ""
       llm_model:
-        description: "LLM Ä£ÐÍ£¨deepseek ÓÃ deepseek-chat£©"
+        description: LLMæ¨¡åž‹(deepseekç”¨ deepseek-chat)
         required: false
         default: ""
       platforms:
-        description: ·¢²¼Æ½Ì¨£¨¶ººÅ·Ö¸ô£©
+        description: å‘å¸ƒå¹³å°(é€—å·åˆ†éš”)
         required: false
-        default: "bilibili,youtube,douyin,xiaohongshu"
-
+        default: "bilibili,youtube"
 permissions:
   contents: write
-
 env:
   OUTPUT_DIR: ${{ github.workspace }}/output
-  CITY: ${{ github.event.inputs.city || '±±¾©' }}
-  STYLE: ${{ github.event.inputs.style || 'ÎÂÅ¯ÖÎÓú' }}
-  LLM_BASE_URL: ${{ github.event.inputs.llm_base_url || secrets.LLM_BASE_URL || 'https://api.openai.com/v1' }}
-  LLM_MODEL: ${{ github.event.inputs.llm_model || secrets.LLM_MODEL || 'gpt-4o-mini' }}
-  PLATFORMS: ${{ github.event.inputs.platforms || 'bilibili,youtube,douyin,xiaohongshu' }}
-
+  CITY: ${{ github.event.inputs.city || 'åŒ—äº¬' }}
+  STYLE: ${{ github.event.inputs.style || 'æ¸©æš–æ²»æ„ˆ' }}
+  LLM_BASE_URL: ${{ github.event.inputs.llm_base_url || secrets.LLM_BASE_URL || 'https://api.deepseek.com/v1' }}
+  LLM_MODEL: ${{ github.event.inputs.llm_model || secrets.LLM_MODEL || 'deepseek-chat' }}
+  PLATFORMS: ${{ github.event.inputs.platforms || 'bilibili,youtube' }}
 jobs:
   generate-morning-video:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-
+    timeout-minutes: 15
     steps:
-      - name: ¼ì³ö²Ö¿â
-        uses: actions/checkout@v4
-
-      - name: ÉèÖÃ Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - name: °²×° Python ÒÀÀµ
-        run: |
+      - run: |
           pip install -r requirements.txt
-          pip install playwright
-          python -m playwright install chromium
-
-      - name: °²×°ÏµÍ³ÒÀÀµ
-        run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            ffmpeg \
-            fonts-wqy-microhei \
-            fonts-wqy-zenhei \
-            libnss3 libnspr4 libatk-bridge2.0-0 \
-            libdrm2 libxkbcommon0 libgbm1 \
-            2>/dev/null
-
-      - name: ´´½¨Êä³öÄ¿Â¼
-        run: mkdir -p $OUTPUT_DIR
-
-      - name: ²½Öè 1 - Éú³ÉÔç°²ÎÄ°¸
+          sudo apt-get install -y -qq ffmpeg fonts-wqy-microhei 2>/dev/null
+        name: å®‰è£…ä¾èµ–
+      - run: mkdir -p $OUTPUT_DIR
+        name: åˆ›å»ºè¾“å‡ºç›®å½•
+      - run: python scripts/generate_script.py
+        name: ç”Ÿæˆæ—©å®‰æ–‡æ¡ˆ
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LLM_BASE_URL: ${{ env.LLM_BASE_URL }}
           LLM_MODEL: ${{ env.LLM_MODEL }}
-        run: python scripts/generate_script.py
-
-      - name: ²½Öè 2 - Éú³ÉÅäÒô
+      - run: python scripts/tts.py
+        name: ç”Ÿæˆé…éŸ³
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           USE_OPENAI_TTS: ${{ secrets.USE_OPENAI_TTS || 'false' }}
           EDGE_TTS_VOICE: "zh-CN-XiaoxiaoNeural"
-        run: python scripts/tts.py
-
-      - name: ²½Öè 3 - ºÏ³ÉÊÓÆµ
+      - run: python scripts/compose_video.py
+        name: åˆæˆè§†é¢‘
         env:
           BG_IMAGE: ${{ secrets.BG_IMAGE_URL || '' }}
           BG_MUSIC: ${{ secrets.BG_MUSIC_URL || '' }}
-        run: python scripts/compose_video.py
-
-      - name: ²½Öè 4 - »Ö¸´ä¯ÀÀÆ÷µÇÂ¼Ì¬
-        env:
-          DOUYIN_SESSION: ${{ secrets.DOUYIN_SESSION || '' }}
-          XIAOHONGSHU_SESSION: ${{ secrets.XIAOHONGSHU_SESSION || '' }}
-        run: |
-          mkdir -p .sessions
-          if [ -n "$DOUYIN_SESSION" ]; then
-            echo "$DOUYIN_SESSION" | base64 -d > .sessions/douyin_session.json
-            echo "¶¶ÒôµÇÂ¼Ì¬ÒÑ»Ö¸´"
-          fi
-          if [ -n "$XIAOHONGSHU_SESSION" ]; then
-            echo "$XIAOHONGSHU_SESSION" | base64 -d > .sessions/xiaohongshu_session.json
-            echo "Ð¡ºìÊéµÇÂ¼Ì¬ÒÑ»Ö¸´"
-          fi
-
-      - name: ²½Öè 5 - ·¢²¼µ½¶àÆ½Ì¨
+      - run: python scripts/publish.py
+        name: å‘å¸ƒåˆ°å¤šå¹³å°
         env:
           BILI_SESSDATA: ${{ secrets.BILI_SESSDATA || '' }}
           BILI_JCT: ${{ secrets.BILI_JCT || '' }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY || '' }}
-          DOUYIN_SESSION: ${{ secrets.DOUYIN_SESSION || '' }}
-          XIAOHONGSHU_SESSION: ${{ secrets.XIAOHONGSHU_SESSION || '' }}
-        run: python scripts/publish.py
-
-      - name: ²½Öè 6 - ÍÆËÍÍ¨Öªµ½ÊÖ»ú
+      - run: python scripts/notify.py
+        name: æŽ¨é€é€šçŸ¥åˆ°æ‰‹æœº
         env:
           SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY || '' }}
-          PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN || '' }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN || '' }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID || '' }}
-        run: python scripts/notify.py
-
-      - name: ÉÏ´«³ÉÆ·ÊÓÆµ£¨Artifact£©
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: morning-greeting-${{ github.run_id }}
-          path: |
-            ${{ env.OUTPUT_DIR }}/*.mp4
-            ${{ env.OUTPUT_DIR }}/script.json
-            .sessions/
-            .screenshots/
+          name: morning-video-${{ github.run_id }}
+          path: ${{ env.OUTPUT_DIR }}/*.mp4
           retention-days: 7
-
-      - name: ÉÏ´«µ÷ÊÔ½ØÍ¼£¨ÈçÓÐ£©
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: debug-screenshots-${{ github.run_id }}
-          path: .screenshots/
-          retention-days: 3
-
-      - name: ´òÓ¡³É±¾±¨¸æ
+        name: ä¸Šä¼ æˆå“è§†é¢‘
+      - name: æ‰“å°æˆæœ¬æŠ¥å‘Š
         run: |
           if [ -f "$OUTPUT_DIR/script.json" ]; then
-            echo "## Ã¿ÈÕÔç°²³É±¾±¨¸æ" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo '```json' >> $GITHUB_STEP_SUMMARY
-            python3 -c "
-import json
-with open('$OUTPUT_DIR/script.json') as f:
-    data = json.load(f)
-meta = data.get('_meta', {})
-publish = meta.get('publish_results', {})
-notify = meta.get('notifications', {})
-publish_summary = {
-    k: v.get('status', 'unknown') for k, v in publish.items()
-} if publish else {}
-notify_summary = {
-    k: v.get('status', 'unknown') for k, v in notify.items()
-} if notify else {}
+            echo '## æ¯æ—¥æ—©å®‰æˆæœ¬æŠ¥å‘Š' >> $GITHUB_STEP_SUMMARY
+            echo '' >> $GITHUB_STEP_SUMMARY
+            cat "$OUTPUT_DIR/script.json" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+m=d.get('_meta',{})
 print(json.dumps({
-    '±êÌâ': data.get('title', ''),
-    'Ä£ÐÍ': meta.get('model', ''),
-    'tokens_×Ü¼Æ': meta.get('tokens_total', 0),
-    'LLM_³É±¾_USD': f'\${meta.get(\"cost_usd\", 0):.6f}',
-    'TTS_·½°¸': meta.get('tts_provider', ''),
-    'TTS_³É±¾_USD': f'\${meta.get(\"tts_cost_usd\", 0):.6f}',
-    '×Ü³É±¾_USD': f'\${meta.get(\"cost_usd\", 0) + meta.get(\"tts_cost_usd\", 0):.6f}',
-    '×Ü³É±¾_RMB': f'£¤{(meta.get(\"cost_usd\", 0) + meta.get(\"tts_cost_usd\", 0)) * 7.3:.4f}',
-    '·¢²¼½á¹û': publish_summary,
-    'ÍÆËÍ½á¹û': notify_summary,
-}, ensure_ascii=False, indent=2))
-" 2>/dev/null || echo '³É±¾±¨¸æÉú³ÉÊ§°Ü'
-            echo '```' >> $GITHUB_STEP_SUMMARY
+    'æ ‡é¢˜': d.get('title',''),
+    'æ¨¡åž‹': m.get('model',''),
+    'tokens': m.get('tokens_total',0),
+    'æˆæœ¬USD': round(m.get('cost_usd',0)+m.get('tts_cost_usd',0),6),
+    'æˆæœ¬RMB': round((m.get('cost_usd',0)+m.get('tts_cost_usd',0))*7.3,4),
+},ensure_ascii=False,indent=2))
+" 2>/dev/null
           fi
-
