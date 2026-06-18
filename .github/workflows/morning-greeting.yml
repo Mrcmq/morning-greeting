@@ -1,102 +1,40 @@
-name: 每日早安自动生成与发布
+name: daily-morning
 on:
-  schedule:
-    - cron: '30 21 * * *'
   workflow_dispatch:
     inputs:
       city:
-        description: 城市
         required: false
-        default: "北京"
+        default: "Beijing"
       style:
-        description: 文案风格
         required: false
-        default: "温暖治愈"
+        default: "warm"
       llm_base_url:
-        description: LLM API地址(deepseek用 https://api.deepseek.com/v1)
         required: false
-        default: ""
+        default: "https://api.deepseek.com/v1"
       llm_model:
-        description: LLM模型(deepseek用 deepseek-chat)
         required: false
-        default: ""
-      platforms:
-        description: 发布平台(逗号分隔)
-        required: false
-        default: "bilibili,youtube"
-permissions:
-  contents: write
+        default: "deepseek-chat"
 env:
+  CITY: ${{ github.event.inputs.city || 'Beijing' }}
+  STYLE: ${{ github.event.inputs.style || 'warm' }}
+  LLM_BASE_URL: ${{ github.event.inputs.llm_base_url || 'https://api.deepseek.com/v1' }}
+  LLM_MODEL: ${{ github.event.inputs.llm_model || 'deepseek-chat' }}
   OUTPUT_DIR: ${{ github.workspace }}/output
-  CITY: ${{ github.event.inputs.city || '北京' }}
-  STYLE: ${{ github.event.inputs.style || '温暖治愈' }}
-  LLM_BASE_URL: ${{ github.event.inputs.llm_base_url || secrets.LLM_BASE_URL || 'https://api.deepseek.com/v1' }}
-  LLM_MODEL: ${{ github.event.inputs.llm_model || secrets.LLM_MODEL || 'deepseek-chat' }}
-  PLATFORMS: ${{ github.event.inputs.platforms || 'bilibili,youtube' }}
 jobs:
-  generate-morning-video:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
-      - run: |
-          pip install -r requirements.txt
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg fonts-wqy-microhei 2>/dev/null
-        name: 安装依赖
-      - run: mkdir -p $OUTPUT_DIR
-        name: 创建输出目录
+      - run: pip install httpx && sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg 2>/dev/null
       - run: python scripts/generate_script.py
-        name: 生成早安文案
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           LLM_BASE_URL: ${{ env.LLM_BASE_URL }}
           LLM_MODEL: ${{ env.LLM_MODEL }}
       - run: python scripts/tts.py
-        name: 生成配音
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          USE_OPENAI_TTS: ${{ secrets.USE_OPENAI_TTS || 'false' }}
-          EDGE_TTS_VOICE: "zh-CN-XiaoxiaoNeural"
       - run: python scripts/compose_video.py
-        name: 合成视频
-        env:
-          BG_IMAGE: ${{ secrets.BG_IMAGE_URL || '' }}
-          BG_MUSIC: ${{ secrets.BG_MUSIC_URL || '' }}
-      - run: python scripts/publish.py
-        name: 发布到多平台
-        env:
-          BILI_SESSDATA: ${{ secrets.BILI_SESSDATA || '' }}
-          BILI_JCT: ${{ secrets.BILI_JCT || '' }}
-      - run: python scripts/notify.py
-        name: 推送通知到手机
-        env:
-          SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY || '' }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: morning-video-${{ github.run_id }}
-          path: ${{ env.OUTPUT_DIR }}/*.mp4
-          retention-days: 7
-        name: 上传成品视频
-      - name: 打印成本报告
-        run: |
-          if [ -f "$OUTPUT_DIR/script.json" ]; then
-            echo '## 每日早安成本报告' >> $GITHUB_STEP_SUMMARY
-            echo '' >> $GITHUB_STEP_SUMMARY
-            cat "$OUTPUT_DIR/script.json" | python3 -c "
-import json,sys
-d=json.load(sys.stdin)
-m=d.get('_meta',{})
-print(json.dumps({
-    '标题': d.get('title',''),
-    '模型': m.get('model',''),
-    'tokens': m.get('tokens_total',0),
-    '成本USD': round(m.get('cost_usd',0)+m.get('tts_cost_usd',0),6),
-    '成本RMB': round((m.get('cost_usd',0)+m.get('tts_cost_usd',0))*7.3,4),
-},ensure_ascii=False,indent=2))
-" 2>/dev/null
-          fi
