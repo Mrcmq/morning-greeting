@@ -14,6 +14,14 @@ on:
         description: 文案风格
         required: false
         default: "温暖治愈"
+      llm_base_url:
+        description: "LLM API 地址（deepseek 用 https://api.deepseek.com/v1）"
+        required: false
+        default: ""
+      llm_model:
+        description: "LLM 模型（deepseek 用 deepseek-chat）"
+        required: false
+        default: ""
       platforms:
         description: 发布平台（逗号分隔）
         required: false
@@ -26,6 +34,8 @@ env:
   OUTPUT_DIR: ${{ github.workspace }}/output
   CITY: ${{ github.event.inputs.city || '北京' }}
   STYLE: ${{ github.event.inputs.style || '温暖治愈' }}
+  LLM_BASE_URL: ${{ github.event.inputs.llm_base_url || secrets.LLM_BASE_URL || 'https://api.openai.com/v1' }}
+  LLM_MODEL: ${{ github.event.inputs.llm_model || secrets.LLM_MODEL || 'gpt-4o-mini' }}
   PLATFORMS: ${{ github.event.inputs.platforms || 'bilibili,youtube,douyin,xiaohongshu' }}
 
 jobs:
@@ -66,6 +76,8 @@ jobs:
       - name: 步骤 1 - 生成早安文案
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LLM_BASE_URL: ${{ env.LLM_BASE_URL }}
+          LLM_MODEL: ${{ env.LLM_MODEL }}
         run: python scripts/generate_script.py
 
       - name: 步骤 2 - 生成配音
@@ -166,3 +178,4 @@ print(json.dumps({
 " 2>/dev/null || echo '成本报告生成失败'
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
+

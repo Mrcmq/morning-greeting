@@ -2,10 +2,15 @@
 # 每日早安 - 配置文件
 # ============================================
 
+# --- LLM 配置 ---
+# 默认使用 OpenAI API，修改以下环境变量可切换：
+#   LLM_BASE_URL = https://api.deepseek.com/v1   # 切换到 DeepSeek
+#   LLM_MODEL    = deepseek-chat                 # DeepSeek 模型名
+
 # --- 文案设定 ---
 city: "北京"                    # 获取天气的城市
 style: "温暖治愈"                # 文案风格：温暖治愈 / 励志 / 文艺 / 幽默
-model: "gpt-4o-mini"           # LLM 模型（推荐 gpt-4o-mini，成本极低）
+model: "gpt-4o-mini"           # LLM 模型: gpt-4o-mini / deepseek-chat / deepseek-reasoner
 
 # --- TTS 语音 ---
 tts:
@@ -33,3 +38,4 @@ publish:
     # - douyin                  # 需浏览器自动化（预留）
     # - xiaohongshu             # 需浏览器自动化（预留）
     # - weibo                   # 需微博开放平台 API
+
