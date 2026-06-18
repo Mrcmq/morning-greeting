@@ -1,0 +1,35 @@
+# ============================================
+# 每日早安 - 配置文件
+# ============================================
+
+# --- 文案设定 ---
+city: "北京"                    # 获取天气的城市
+style: "温暖治愈"                # 文案风格：温暖治愈 / 励志 / 文艺 / 幽默
+model: "gpt-4o-mini"           # LLM 模型（推荐 gpt-4o-mini，成本极低）
+
+# --- TTS 语音 ---
+tts:
+  provider: "edge"              # edge（免费）或 openai（$0.015/1K chars）
+  edge_voice: "zh-CN-XiaoxiaoNeural"
+  openai_voice: "nova"
+
+# --- 视频 ---
+video:
+  portrait:                     # 竖版 9:16（抖音/快手/小红书）
+    width: 1080
+    height: 1920
+  landscape:                    # 横版 16:9（B站/YouTube）
+    width: 1920
+    height: 1080
+  background_color: "0xFFF5E1"  # 无背景图时的底色
+  subtitle_font: "Microsoft YaHei"
+  subtitle_size: 48
+
+# --- 发布平台（启用时需设置对应的 GitHub Secrets）---
+publish:
+  platforms:
+    - bilibili                  # 需 BILI_SESSDATA + BILI_JCT
+    - youtube                   # 需 YOUTUBE_API_KEY + OAuth
+    # - douyin                  # 需浏览器自动化（预留）
+    # - xiaohongshu             # 需浏览器自动化（预留）
+    # - weibo                   # 需微博开放平台 API
