@@ -1,0 +1,6 @@
+httpx>=0.27
+edge-tts>=6.1
+bilibili-api-python>=16.0
+google-api-python-client>=2.0
+google-auth-oauthlib>=1.0
+playwright>=1.40
